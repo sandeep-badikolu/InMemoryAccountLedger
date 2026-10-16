@@ -13,13 +13,13 @@ var events = new[]
     new LedgerEvent("E3", 2, 2, EventKind.Authorization, "ACC-001", 200.00m, "Auth-A"),
     new LedgerEvent("E4", 3, 3, EventKind.Credit, "ACC-001", 400.00m, Description: "Day 3 credit"),
     new LedgerEvent("E5", 4, 4, EventKind.Settlement, "ACC-001", 185.00m, "Auth-A"),
-    new LedgerEvent("E6", 4, 4, EventKind.Settlement, "ACC-001", 180.00m, "Auth-Z"),
-    new LedgerEvent("E7", 5, 2, EventKind.Debit, "ACC-001", 620.00m, Description: "Backdated debit"),
+    new LedgerEvent("E6", 4, 4, EventKind.Settlement, "ACC-001", 160.00m, "Auth-Z"),
+    new LedgerEvent("E7", 5, 2, EventKind.Debit, "ACC-001", 820.00m, Description: "Backdated debit"),
     new LedgerEvent("E8", 5, 5, EventKind.Authorization, "ACC-001", 90.00m, "Auth-B"),
-    new LedgerEvent("E9", 6, 2, EventKind.Reversal, "ACC-001", 620.00m, ReversesEventId: "E7"),
-    new LedgerEvent("E10a", 5, 5, EventKind.Credit, "ACC-002", 3.333m, Description: "BHD instalment 1/3"),
-    new LedgerEvent("E10b", 5, 5, EventKind.Credit, "ACC-002", 3.333m, Description: "BHD instalment 2/3"),
-    new LedgerEvent("E10c", 5, 5, EventKind.Credit, "ACC-002", 3.334m, Description: "BHD instalment 3/3")
+    new LedgerEvent("E9", 6, 2, EventKind.Reversal, "ACC-001", 820.00m, ReversesEventId: "E7"),
+    new LedgerEvent("E10a", 6, 5, EventKind.Credit, "ACC-002", 3.333m, Description: "BHD instalment 1/3"),
+    new LedgerEvent("E10b", 6, 5, EventKind.Credit, "ACC-002", 3.333m, Description: "BHD instalment 2/3"),
+    new LedgerEvent("E10c", 6, 5, EventKind.Credit, "ACC-002", 3.334m, Description: "BHD instalment 3/3")
 };
 
 var result = new LedgerEngine(accounts).Replay(events);

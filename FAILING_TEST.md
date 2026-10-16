@@ -19,7 +19,7 @@ public void DeliberatelyFailingTest_OverdraftFeeRemainsAfterE7EvenWhenE9Reverses
 
 Two acceptance statements conflict:
 
-1. **E7 causes an overdraft fee on Day 2** (true while E7 stands and Day 2 closes negative — see passing test `Day2ClosingBalance_IsNegative370_BeforeE9IsApplied`).
+1. **E7 causes an overdraft fee on Day 2** (true while E7 stands and Day 2 closes negative — see passing test `Day2ClosingBalance_IsNegative570_BeforeE9IsApplied`).
 2. **After E9, balances and fees return to pre-E7 values** (requires no Day-2 fee once E9 restores the Day-2 ledger balance).
 
 This implementation **recomputes fees from the final value-dated ledger** after the full stream is applied. After E9, Day 2’s closing balance is AED 250.00 again, so **no Day-2 fee is booked**. The assertion above expects a fee to remain anyway, which would violate criterion (2) unless fees are separate immutable events with their own reversal policy.

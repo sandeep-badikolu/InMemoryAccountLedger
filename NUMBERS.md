@@ -14,8 +14,8 @@
 | Auth-A hold | AED `200.00` | Supplied by assignment |
 | E4 credit | AED `400.00` | Supplied by assignment |
 | Auth-A settlement | AED `185.00` | Supplied by assignment |
-| Invalid Auth-Z settlement | AED `180.00` | Supplied by assignment; must be rejected |
-| E7 debit / E9 reversal | AED `620.00` | Supplied by assignment |
+| Invalid Auth-Z settlement | AED `160.00` | Supplied by assignment; must be rejected |
+| E7 debit / E9 reversal | AED `820.00` | Supplied by assignment |
 | Auth-B hold | AED `90.00` | Supplied by assignment |
 | E10 credit | BHD `10.000` | Supplied by assignment |
 | BHD instalment allocation | `3.333`, `3.333`, `3.334` | Exact total is `10.000`; three `3.334` instalments would total `10.002` |

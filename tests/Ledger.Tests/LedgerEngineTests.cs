@@ -18,13 +18,13 @@ public sealed class LedgerEngineTests
         new LedgerEvent("E3", 2, 2, EventKind.Authorization, "ACC-001", 200.00m, "Auth-A"),
         new LedgerEvent("E4", 3, 3, EventKind.Credit, "ACC-001", 400.00m),
         new LedgerEvent("E5", 4, 4, EventKind.Settlement, "ACC-001", 185.00m, "Auth-A"),
-        new LedgerEvent("E6", 4, 4, EventKind.Settlement, "ACC-001", 180.00m, "Auth-Z"),
-        new LedgerEvent("E7", 5, 2, EventKind.Debit, "ACC-001", 620.00m),
+        new LedgerEvent("E6", 4, 4, EventKind.Settlement, "ACC-001", 160.00m, "Auth-Z"),
+        new LedgerEvent("E7", 5, 2, EventKind.Debit, "ACC-001", 820.00m),
         new LedgerEvent("E8", 5, 5, EventKind.Authorization, "ACC-001", 90.00m, "Auth-B"),
-        new LedgerEvent("E9", 6, 2, EventKind.Reversal, "ACC-001", 620.00m, ReversesEventId: "E7"),
-        new LedgerEvent("E10a", 5, 5, EventKind.Credit, "ACC-002", 3.333m),
-        new LedgerEvent("E10b", 5, 5, EventKind.Credit, "ACC-002", 3.333m),
-        new LedgerEvent("E10c", 5, 5, EventKind.Credit, "ACC-002", 3.334m)
+        new LedgerEvent("E9", 6, 2, EventKind.Reversal, "ACC-001", 820.00m, ReversesEventId: "E7"),
+        new LedgerEvent("E10a", 6, 5, EventKind.Credit, "ACC-002", 3.333m),
+        new LedgerEvent("E10b", 6, 5, EventKind.Credit, "ACC-002", 3.333m),
+        new LedgerEvent("E10c", 6, 5, EventKind.Credit, "ACC-002", 3.334m)
     };
 
     [Fact]
@@ -127,14 +127,16 @@ public sealed class LedgerEngineTests
     }
 
     [Fact]
-    public void Day2ClosingBalance_IsNegative370_BeforeE9IsApplied()
+    public void Day2ClosingBalance_IsNegative570_BeforeE9IsApplied()
     {
-        var withoutReversal = AssignmentEvents().Where(e => e.Id != "E9").ToList();
-        var result = CreateEngine().Replay(withoutReversal, 5);
+        var beforeE9Window = AssignmentEvents()
+            .Where(e => e.Id != "E9" && e.RecordedDay <= 5)
+            .ToList();
+        var result = CreateEngine().Replay(beforeE9Window, 5);
         var day2 = result.DailySnapshots[1].Accounts["ACC-001"];
         var day2Fee = result.DailySnapshots[1].FeesAssessed["ACC-001"];
         Assert.Equal(25.00m, day2Fee);
-        Assert.Equal(-370.00m, day2.LedgerBalance + day2Fee);
+        Assert.Equal(-570.00m, day2.LedgerBalance + day2Fee);
         Assert.Contains(result.BookedFees, f => f.ValueDay == 2 && f.Amount == 25.00m);
     }
 

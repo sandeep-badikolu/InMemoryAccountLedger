@@ -4,7 +4,7 @@ The exercise deliberately combines value dates, recorded dates, reversals, fees,
 
 ## 1. Does a reversal erase a previously assessed overdraft fee?
 
-**Ambiguity:** E7 is recorded on Day 5 with value date Day 2 and takes ACC-001 to `-370.00` on Day 2. The acceptance criteria say this causes one AED 25 fee on Day 2. E9 later reverses E7 with value date Day 2. Another criterion says all balances and fees return to their pre-E7 values.
+**Ambiguity:** E7 is recorded on Day 5 with value date Day 2 and takes ACC-001 to `-570.00` on Day 2. The acceptance criteria say this causes one AED 25 fee on Day 2. E9 later reverses E7 with value date Day 2. Another criterion says all balances and fees return to their pre-E7 values.
 
 **Resolution for this implementation:** The reversal compensates the debit for ledger-balance purposes, but the fee rule is not automatically reversed. The assignment does not explicitly say that reversal of a debit reverses a separately assessed fee. This means the two acceptance statements cannot both be guaranteed without a fee-reversal policy. The fee should be represented as its own immutable event in a production design.
 

@@ -4,7 +4,7 @@
 
 | Criterion | Verdict |
 |---|---|
-| Day 2 closing ledger balance is AED **-370.00** when evaluated after E7 and before E9 | **Accepted** — verified in `Day2ClosingBalance_IsNegative370_BeforeE9IsApplied`. |
+| Day 2 closing ledger balance is AED **-570.00** when evaluated after E7 and before E9 | **Accepted** — verified in `Day2ClosingBalance_IsNegative570_BeforeE9IsApplied`. |
 | E7 causes exactly one overdraft fee on Day 2 | **Accepted in the E7-only window** — fee books when E7 is present without E9; not simultaneously compatible with full post-E9 fee rollback without a fee-reversal policy. |
 | Day 4 settlement of Auth-A must be accepted | **Accepted** — E5 succeeds. |
 | Settlement without a prior authorization must be rejected (E6 / Auth-Z) | **Accepted** — E6 rejected; ledger unchanged by E6. |
