@@ -1,6 +1,8 @@
 # In-Memory Account Ledger Core
 
-A .NET 10 in-memory ledger replay engine for the Mal Bank assignment. There is no web layer, database, UI, or persistence. The runner replays the supplied six-day event stream and prints daily closing balances, fee assessments, authorization states, and errors.
+A .NET 10 in-memory ledger replay engine for the Mal Bank Staff Engineer exercise. There is no web layer, database, UI, or persistence. The runner replays the supplied six-day event stream and prints daily closing balances, fee assessments, authorization states, and errors.
+
+**Public repository:** https://github.com/sandeep-badikolu/InMemoryAccountLedger
 
 ## Requirements
 
@@ -15,29 +17,31 @@ dotnet test
 dotnet run --project src/Ledger.Runner/Ledger.Runner.csproj
 ```
 
-The test suite includes **one intentionally failing test** (`DeliberatelyFailingTest_OverdraftFeeRemainsAfterE7EvenWhenE9ReversesDebit`) that documents a fee/reversal policy conflict. See `FAILING_TEST.md`. All other tests should pass.
+The test suite includes **one intentionally failing test** (`DeliberatelyFailingTest_OverdraftFeeRemainsAfterE7EvenWhenE9ReversesDebit`) with **inline comments** explaining the policy conflict. See `FAILING_TEST.md`. All other tests should pass.
 
 ## Design summary
 
-- `LedgerEvent` records are immutable. `RecordedDay` is when the event entered the stream; `ValueDay` is the accounting date.
+- `LedgerEvent` records are immutable. `RecordedDay` is when an event entered the stream; `ValueDay` is the accounting date.
 - Events are validated and applied in **stream order**.
 - Balances, fees, and interest use entries with `ValueDay` on or before the reporting day.
-- Authorizations are approved only if available balance (prior-day closing ledger minus active holds) remains ≥ 0 after the new hold.
-- Settlements require a matching, unsettled authorization on the same account.
+- Authorizations are approved only if **available balance** (per rules in `AMBIGUITIES.md` §9) remains ≥ 0 after the new hold.
+- Settlements require a matching, unsettled authorization on the same account (E6 / Auth-Z is rejected).
 - Reversals are compensating credits; the original debit is never mutated.
-- AED overdraft fees (AED 25.00) are booked as system fee events on days where the closing ledger balance is negative.
+- AED overdraft fees (AED 25.00) are booked as system fee events when the pre-fee closing balance is negative for that value date.
 - Daily interest (0.04%) accrues on positive closing balances and capitalizes as a single credit on Day 6; rounding remainder is applied to the last accrual day.
 - `Money` uses `decimal` with currency scale (AED: 2, BHD: 3).
 
-## Deliverables in this repo
+## Assignment deliverables (Part 1)
 
 | File | Purpose |
 |---|---|
+| `README.md` | How to run and read output |
 | `NUMBERS.md` | Constants and amounts |
 | `AMBIGUITIES.md` | Ambiguities and resolutions |
-| `REJECTED.md` | Incorrect acceptance criteria and abandoned approaches |
+| `REJECTED.md` | Refused criteria and abandoned approaches |
 | `FAILING_TEST.md` | Annotated intentional failure |
 | `WORKLOG.md` | Timestamped work log |
+| `ARCHITECTURE.md` | Part 2 source document (PDF in `submission/`) |
 
 ## Output
 
@@ -50,17 +54,11 @@ The test suite includes **one intentionally failing test** (`DeliberatelyFailing
 
 The final section lists accepted/rejected stream events, booked fees, and capitalized interest.
 
-## Submitting
+## Part 2 (architecture PDF)
 
-The assignment requires a **public GitHub repository** with an intact (non-squashed) commit history. This folder is not yet a git repository on your machine — initialize it, commit in logical steps, push, and paste the repo URL into the form:
+Upload **`submission/Mal-Bank-Architecture-Trade-offs.pdf`** to the assessment form. Regenerate with:
 
 ```bash
-git init
-git add .
-git commit -m "Initial in-memory ledger core implementation"
-# Create an empty public repo on GitHub, then:
-git remote add origin https://github.com/<you>/InMemoryAccountLedger.git
-git push -u origin main
+pip install fpdf2
+python scripts/generate_architecture_pdf.py
 ```
-
-Confirm the link opens in a browser without signing in before you submit.

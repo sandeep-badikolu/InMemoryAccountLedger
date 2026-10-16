@@ -1,50 +1,92 @@
 # Architecture & Trade-offs — In-Memory Account Ledger Core
 
-*Export this document to PDF for Part 2 submission (2–4 pages).*
+**Author:** Sandeep Badikolu  
+**Repository:** https://github.com/sandeep-badikolu/InMemoryAccountLedger  
+**Scope:** Staff engineer exercise — in-memory ledger replay (Days 1–6), no persistence layer.
+
+---
 
 ## 1. Append-only at scale
 
-**What breaks at 100× volume?**  
-This exercise stores every input event in memory and recomputes balances by scanning accepted events per account per day. At 100× event volume, CPU and heap grow roughly linearly with stream length; daily snapshots become O(days × events × accounts). Authorization indexes and hold maps stay bounded by active auths, but the event list is unbounded.
+### What breaks at 100× volume?
 
-**Where state accumulates**  
-The full append-only event log, derived fee/interest system events, and per-replay snapshot materialization. Nothing is compacted or archived.
+The reference engine keeps the full input stream in memory and, for each reporting day, scans accepted events to compute closing balances, holds, fees, and interest accruals. Complexity scales roughly as **O(days × events × accounts)** per replay. At 100× event volume:
 
-**Cheapest structural change**  
-Introduce **event segmentation**: immutable daily (or monthly) **sequence segments** with precomputed **closing balances and hold summaries** per account at segment boundaries. Replay only needs the last segment summary plus events since that boundary. Storage can remain append-only (new segment headers appended); no mutation of historical events.
+- **Heap:** The event log and derived system events (fees, interest capitalization) grow without bound.
+- **CPU:** Repeated scans for balance/hold calculation dominate; snapshot generation becomes expensive.
+- **Latency:** A single-threaded replay that is acceptable for a test harness becomes unsuitable for interactive APIs or batch close-of-day at bank scale.
 
-## 2. Value-dated entries in production (UAE context)
+### Where is state unbounded?
 
-Backdated debits (E7) change historical closing balances and can affect fees, interest, and regulatory reporting retroactively. For a UAE-licensed bank, value dating intersects **CBUAE** expectations on accurate customer balances, **AML/CFT** audit trails, and **IFRS** recognition timing.
+| State | Grows with |
+|-------|------------|
+| Immutable event log | Every posted/rejected stream event + system-generated fee/interest events |
+| Authorization index | Distinct auth IDs (bounded in exercise; unbounded in production) |
+| Daily snapshot materialization | Days × accounts (recomputed each replay unless cached) |
 
-**Control before go-live:** **Maker–checker with effective-date policy** — no value-dated posting outside a defined backdating window without second-line approval, immutable audit record (who approved, business reason, customer impact), and automated **recalculation jobs** for fees/interest/tax reports affected by the adjustment.
+Nothing is compacted, archived, or tiered. There is no snapshot store — only re-derivation from the log.
 
-## 3. Authorization lifecycle beyond settlement
+### Cheapest structural change
 
-Authorizations can end without a matching settlement amount:
+**Segmented append-only log with boundary snapshots:** partition the log by time (e.g. calendar day or month). At each segment boundary, persist an immutable **account summary** (ledger balance, active holds, last sequence number). Replay for a given date range loads one summary plus only events in the tail segment. This preserves append-only semantics (new segment headers and events are appended; history is never rewritten) while bounding work to “tail + one summary” instead of the full history.
 
-| End state | Real-world scenario | Required behavior |
-|-----------|---------------------|-------------------|
-| **Expiry** | Card pre-auth TTL (hotels, fuel) | Release hold on expiry; no ledger debit |
-| **Partial settlement** | Final amount &lt; hold | Debit settled amount; release remainder |
-| **Reversal / void** | Merchant cancel before capture | Remove hold; idempotent void event |
-| **Chargeback / dispute** | Post-settlement dispute | Separate dispute workflow; do not reuse auth id |
-| **Incremental auth** | Tipping, multi-capture | Extend or replace hold with explicit linking |
+---
 
-Auth-B in the assignment (never settled) remains an **active hold** until expiry or explicit release — production must define TTL and reporting of stale holds.
+## 2. Value-dated entries — UAE production surface
 
-## 4. Scope trade-offs (exercise vs production)
+Backdated debits (e.g. E7 with `value_date` Day 2, recorded Day 5) change historical closes and can alter fees, interest, liquidity reporting, and customer statements after the fact.
 
-| Simplified | Why | Deferred risk |
-|------------|-----|----------------|
-| In-memory only | Assignment scope | Data loss, no DR, no multi-node consistency |
-| Single-process replay | Determinism | No concurrent writers; race on balance updates |
-| Fee recompute from final value-dated ledger | Resolves reversal ambiguity simply | Incorrect if fees must be immutable once posted |
-| Authorization balance rule (recorded vs value date) | Makes Auth-B approvable | Misalignment with real-time available balance |
-| No idempotency keys / duplicate detection beyond event id | Smaller code | Double-posting from retries |
-| Interest capitalized only on Day 6 | Spec compliance | No mid-period payouts or tiered rates |
-| No multi-currency FX | Two static currencies | Cross-currency auth/settlement unsupported |
+For a **UAE-licensed** institution, value dating touches:
 
-## 5. Design stance
+- **Customer fairness & disclosure** — balances and charges shown on channels must reconcile to the authoritative ledger.
+- **Regulatory reporting** — CBUAE supervisory returns and liquidity metrics depend on correct as-of balances.
+- **Audit & AML** — investigators need an immutable trail of who introduced a backdated entry and why.
 
-The core models **immutable events**, **explicit rejection**, and **separation of ledger vs available balance**. Production would externalize the event log (Kafka/S3), use **command handlers with optimistic locking per account**, materialize **read models** for statements, and treat fees/interest as **first-class posted entries** with their own reversal policies.
+### One control before go-live
+
+**Maker–checker with effective-date policy and automated restatement:**  
+Block or queue any posting where `value_date` is before the current business date unless a second approver (operations or finance control) authorizes it in a workflow system. Persist approval metadata (user, timestamp, reason code, customer impact flag). On approval, run a **deterministic restatement job** that recalculates affected days’ fees, interest, and regulatory extracts and stores versioned outputs — without mutating original events (compensating entries only).
+
+---
+
+## 3. Authorization lifecycle (beyond settlement)
+
+Settlements are one terminal state. Production systems must handle:
+
+| Terminal / transition | Scenario | Mandated behavior |
+|----------------------|----------|-------------------|
+| **Expiry** | Card pre-auth TTL (hotels, petrol pumps) | Release hold at expiry; no ledger debit |
+| **Partial capture** | Final amount less than hold | Debit actual amount; release residual hold |
+| **Void / reversal before capture** | Merchant cancels | Idempotent void; remove hold |
+| **Incremental authorization** | Tips, multi-shipment | Link child auths; cap total exposure |
+| **Chargeback** | Dispute after capture | New dispute ledger workflow; never reuse auth id as settlement |
+| **Stale hold** | Auth-B never settled (assignment) | Report open exposure; enforce TTL and escalation |
+
+The exercise models holds affecting **available** balance only; production must align TTL, reporting, and customer notifications for unreleased holds.
+
+---
+
+## 4. Scope trade-offs (what we cut and deferred risk)
+
+| Cut / simplification | Rationale in exercise | Production risk deferred |
+|---------------------|------------------------|---------------------------|
+| No database / event store | Assignment scope | No durability, DR, or horizontal scale |
+| Single-process replay | Determinism & clarity | Race conditions under concurrent writers |
+| Fee recompute from final value-dated ledger | Resolves E7/E9 ambiguity without fee-reversal events | Posted fees may not match operational “point-in-time” truth |
+| Authorization balance uses recorded-day + value-day rules | Allows Auth-B approval with backdated E7 | May diverge from real-time available balance |
+| No idempotency beyond unique event IDs | Smaller surface | Duplicate delivery from messaging retries |
+| Interest only capitalized Day 6 | Spec | No mid-period payouts, tiered rates, or tax withholding |
+| Two static currencies, no FX | Spec | No cross-currency holds or settlement |
+| No API / UI / authn | Spec | Integration, rate limits, and fraud monitoring omitted |
+
+---
+
+## 5. Implementation stance (link to Part 1)
+
+The codebase enforces **immutable input events**, **explicit rejection** (e.g. E6 / Auth-Z), **append-only** semantics, and separation of **ledger vs available** balance. System fees and interest are generated as separate events for reporting. One **intentionally failing test** documents the conflict between “fee when Day 2 goes negative” and “fees return to pre-E7 state after E9” when fees are recomputed — see `FAILING_TEST.md` and `REJECTED.md`.
+
+Production evolution: externalize the log (e.g. Kafka + object storage), **per-account command serialization** (optimistic locking), materialized read models for statements, and first-class fee/interest entries with explicit reversal policies.
+
+---
+
+*End of document — suitable for 2–4 page PDF submission.*

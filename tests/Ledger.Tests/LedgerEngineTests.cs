@@ -156,6 +156,9 @@ public sealed class LedgerEngineTests
     public void DeliberatelyFailingTest_OverdraftFeeRemainsAfterE7EvenWhenE9ReversesDebit()
     {
         var result = CreateEngine().Replay(AssignmentEvents());
+        // REVEALS: This engine recomputes fees from the final value-dated ledger after E9,
+        // so Day 2 is no longer negative and no fee is booked — conflicting with criteria that
+        // require a Day-2 fee to persist after E7 even once E9 reverses the debit.
         Assert.Contains(result.BookedFees, f => f.ValueDay == 2 && f.AccountId == "ACC-001");
     }
 }
