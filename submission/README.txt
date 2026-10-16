@@ -3,7 +3,7 @@ Part 2 upload file
 
 Upload this PDF to the assessment form (Part 2: Architecture & Trade-offs):
 
-  Mal-Bank-Architecture-Trade-offs.pdf
+  Mal-Bank-Architecture-Trade-offs.pdf  (4 pages, live-defense ready)
 
 Regenerate after editing ARCHITECTURE.md:
 

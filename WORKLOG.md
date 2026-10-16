@@ -9,3 +9,4 @@
 - **2026-10-16 16:00** — Aligned stream with official spec (E6 AED 160, E7/E9 AED 820, E10 recorded Day 6).
 - **2026-10-16 16:15** — Initialized git, pushed to public GitHub `sandeep-badikolu/InMemoryAccountLedger` (5+ commits, no squash).
 - **2026-10-16 16:30** — Expanded `ARCHITECTURE.md` and generated Part 2 PDF under `submission/`.
+- **2026-10-16 17:00** — Expanded Part 2 PDF to four pages (scale, UAE value dating, auth lifecycle, scope trade-offs, defense Q&A).
