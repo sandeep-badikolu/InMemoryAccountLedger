@@ -1,0 +1,12 @@
+bin/
+obj/
+.vs/
+TestResults/
+*.user
+*.suo
+.env
+.env.*
+*.pfx
+*.pem
+id_rsa*
+*credentials*
